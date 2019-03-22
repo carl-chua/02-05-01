@@ -1,4 +1,5 @@
 #include <serialize.h>
+#include <math.h>
 #include "packet.h"
 #include "constants.h"
 
@@ -38,9 +39,10 @@
 #define PI 3.141592654 //got compile error
 
 //Alex's length and breadth in cm
+//Numbers here are currently placeholders, must measure later
 
-//#define ALEX_LENGTH 8
-//#define ALEX_BREADTH 3
+#define ALEX_LENGTH 8
+#define ALEX_BREADTH 3
 
 //Alex's diagonal. We compute and store this once
 //since it is expensive to compute and really doesn't change.
@@ -442,6 +444,21 @@ void reverse(float dist, float speed)
   analogWrite(RF, 0);
 }
 
+//New function to esimate number of wheel ticks
+//needed to turn an angle
+unsigned long computeDeltaTicks(float ang)
+{
+  //We will assume that angular distance moved = linear distance moved in one wheel
+  //revolution. THis is (probably) incorrect but simplifies calculation.
+  //# of wheel revs to make one full 360 turn is AlexCirc/ WHEEL_CIRC
+  //This is for 260 degrees. For ang degrees it will be (ang * AlexCirc) / (360 * WHEEL_CIRC)
+  //To convert to ticks, we multiply by COUNTS_PER_REV.
+
+  unsigned long ticks = (unsigned long) ((ang * AlexCirc * COUNTS_PER_REV) / (360.0 * WHEEL_CIRC));
+
+  return ticks;
+}
+
 // Turn Alex left "ang" degrees at speed "speed".
 // "speed" is expressed as a percentage. E.g. 50 is
 // turn left at half speed.
@@ -451,6 +468,12 @@ void left(float ang, float speed)
 {
   int val = pwmVal(speed);
   dir = LEFT;
+
+  if (ang == 0) deltaTicks = 9999999;
+  else deltaTicks = computeDeltaTicks(ang);
+
+  targetTicks = leftReverseTicksTurns + deltaTicks;
+  
   // For now we will ignore ang. We will fix this in Week 9.
   // We will also replace this code with bare-metal later.
   // To turn left we reverse the left wheel and move
@@ -470,6 +493,12 @@ void right(float ang, float speed)
 {
   int val = pwmVal(speed);
   dir = RIGHT;
+
+  if (ang == 0) deltaTicks = 9999999;
+  else deltaTicks = computeDeltaTicks(ang);
+
+  targetTicks = rightReverseTicksTurns + deltaTicks;
+  
   // For now we will ignore ang. We will fix this in Week 9.
   // We will also replace this code with bare-metal later.
   // To turn right we reverse the right wheel and move
@@ -614,7 +643,9 @@ void waitForHello()
 
 void setup() {
   // put your setup code here, to run once:
-
+  AlexDiagonal = sqrt((ALEX_LENGTH * ALEX_LENGTH) + (ALEX_BREADTH * ALEX_BREADTH));
+  AlexCirc = PI * AlexDiagonal;
+  
   cli();
   setupEINT();
   setupSerial();
@@ -700,5 +731,33 @@ void loop() {
       newDist=0; 
       stop(); 
     } 
-  } 
+  }
+
+  if (deltaTicks > 0)
+  {
+    if (dir == LEFT)
+    {
+      if (leftReverseTicksTurns >= targetTicks)
+      {
+        deltaTicks = 0;
+        targetTicks = 0;
+        stop();
+      }
+    }
+    else if (dir == RIGHT)
+    {
+      if (rightReverseTicksTurns >= targetTicks)
+      {
+        deltaTicks = 0;
+        targetTicks = 0;
+        stop();
+      }
+    }
+    else if (dir == STOP)
+    {
+      deltaTicks = 0;
+      targetTicks = 0;
+      stop();
+    }
+  }
 }
