@@ -23,6 +23,8 @@
 #define ECHO_PIN 12
 #define MAX_DISTANCE 200
 unsigned int Distance;
+unsigned int scanDistance = 99;
+bool brake = false;
 
 // NewPing setup of pins and maximum distance
 NewPing sonar(TRIGGER_PIN, ECHO_PIN, MAX_DISTANCE); 
@@ -31,7 +33,7 @@ NewPing sonar(TRIGGER_PIN, ECHO_PIN, MAX_DISTANCE);
 // wheel encoder. The higher it is the more the wheel turns to meet distance
 
 #define COUNTS_PER_REV      100
-#define COUNTS_PER_REV_TURN 40
+#define COUNTS_PER_REV_TURN 55
 
 // Wheel circumference in cm.
 // We will use this to calculate forward/backward distance traveled 
@@ -415,7 +417,6 @@ void forward(float dist, float speed)
   else deltaDist = 999999;
 
   newDist = leftForwardDist + deltaDist;
-  
   int val = pwmVal(speed);
   dir = FORWARD;
   // For now we will ignore dist and move
@@ -425,13 +426,19 @@ void forward(float dist, float speed)
   // LF = Left forward pin, LR = Left reverse pin
   // RF = Right forward pin, RR = Right reverse pin
   // This will be replaced later with bare-metal code.
-
-
-  
-  analogWrite(LF, val);
-  analogWrite(RF, val);
+  analogWrite(LF, val - 2);
+  analogWrite(RF, val - 8);
   analogWrite(LR,0);
   analogWrite(RR, 0);
+  if (leftForwardDist - newDist < 5) {
+      analogWrite(LF, 0);
+      analogWrite(RF, 0);
+      analogWrite(LR, 255);
+      analogWrite(RR, 255);
+      int temp = deltaDist/1.5;
+      if (temp > 60) temp = 60;
+      delay(temp); 
+  }
 }
 
 // Reverse Alex "dist" cm at speed "speed".
@@ -708,20 +715,18 @@ void handlePacket(TPacket *packet)
 
 void DistanceSensor()
 {
-   delay(50);
-   unsigned int Distance = 0;
-   for (int i = 0; i < 50; i++) {
+   Distance = 0;
+   for (int i = 0; i < 5; i++) {
     delay(10);
     Distance += sonar.ping_cm();
    }
-   Distance = Distance/50;
+   scanDistance = Distance/5;
    //Serial.print(Distance);
    //Serial.println("cm");
 }
 
 void loop() {
 
-  DistanceSensor(); //Actual distance is longer than the read distance
  // put your main code here, to run repeatedly:
   TPacket recvPacket; // This holds commands from the Pi
 
@@ -740,15 +745,26 @@ void loop() {
         sendBadChecksum();
       } 
 
+  
   if(deltaDist > 0) 
   { 
     if(dir==FORWARD) 
     { 
-      if(((leftForwardDist > newDist) && (rightForwardDist > newDist)) || (Distance <= 7)) 
+      
+      while((leftForwardDist <= newDist) && (rightForwardDist <= newDist)) {
+        scanDistance = 99;
+        DistanceSensor();
+        if (scanDistance <= 8) {
+          break;
+        }
+      }
+      
+      //if((leftForwardDist > newDist) && (rightForwardDist > newDist))
       { 
+        delay(50); 
         deltaDist=0; 
         newDist=0; 
-        stop(); 
+        stop();
       } 
     } 
     else if(dir == BACKWARD) 
@@ -796,3 +812,4 @@ void loop() {
     }
   }
 }
+
