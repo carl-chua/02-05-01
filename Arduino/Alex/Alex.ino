@@ -681,7 +681,7 @@ void setup() {
   enablePullups();
   initializeState();
   sei();
-  Serial.begin(9600);
+  //Serial.begin(9600);
 }
 
 void handlePacket(TPacket *packet)
@@ -715,8 +715,8 @@ void DistanceSensor()
     Distance += sonar.ping_cm();
    }
    Distance = Distance/50;
-   Serial.print(Distance);
-   Serial.println("cm");
+   //Serial.print(Distance);
+   //Serial.println("cm");
 }
 
 void loop() {
