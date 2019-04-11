@@ -2,6 +2,7 @@
 #include <math.h>
 #include "packet.h"
 #include "constants.h"
+#include "NewPing.h"
 
 /*
  * Alex's configuration constants
@@ -16,6 +17,15 @@
  } TDirection;
 
  volatile TDirection dir = STOP;
+
+//Pins for ultrasonic sensor
+#define TRIGGER_PIN 13
+#define ECHO_PIN 12
+#define MAX_DISTANCE 200
+unsigned int Distance;
+
+// NewPing setup of pins and maximum distance
+NewPing sonar(TRIGGER_PIN, ECHO_PIN, MAX_DISTANCE); 
 
 // Number of ticks per revolution from the 
 // wheel encoder. The higher it is the more the wheel turns to meet distance
@@ -671,6 +681,7 @@ void setup() {
   enablePullups();
   initializeState();
   sei();
+  Serial.begin(9600);
 }
 
 void handlePacket(TPacket *packet)
@@ -695,14 +706,22 @@ void handlePacket(TPacket *packet)
   }
 }
 
+void DistanceSensor()
+{
+   delay(50);
+   unsigned int Distance = 0;
+   for (int i = 0; i < 50; i++) {
+    delay(10);
+    Distance += sonar.ping_cm();
+   }
+   Distance = Distance/50;
+   Serial.print(Distance);
+   Serial.println("cm");
+}
+
 void loop() {
 
-// Uncomment the code below for Step 2 of Activity 3 in Week 8 Studio 2
-
-// forward(0, 100);
-
-// Uncomment the code below for Week 9 Studio 2
-
+  DistanceSensor(); //Actual distance is longer than the read distance
  // put your main code here, to run repeatedly:
   TPacket recvPacket; // This holds commands from the Pi
 
@@ -725,7 +744,7 @@ void loop() {
   { 
     if(dir==FORWARD) 
     { 
-      if((leftForwardDist > newDist) && (rightForwardDist > newDist)) 
+      if(((leftForwardDist > newDist) && (rightForwardDist > newDist)) || (Distance <= 7)) 
       { 
         deltaDist=0; 
         newDist=0; 
