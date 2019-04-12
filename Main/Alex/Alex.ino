@@ -33,7 +33,7 @@ NewPing sonar(TRIGGER_PIN, ECHO_PIN, MAX_DISTANCE);
 // wheel encoder. The higher it is the more the wheel turns to meet distance
 
 #define COUNTS_PER_REV      100
-#define COUNTS_PER_REV_TURN 55
+#define COUNTS_PER_REV_TURN 35
 
 // Wheel circumference in cm.
 // We will use this to calculate forward/backward distance traveled 
@@ -417,7 +417,7 @@ void forward(float dist, float speed)
   else deltaDist = 999999;
 
   newDist = leftForwardDist + deltaDist;
-  int val = pwmVal(speed);
+  int val = pwmVal(80);
   dir = FORWARD;
   // For now we will ignore dist and move
   // forward indefinitely. We will fix this
@@ -426,17 +426,18 @@ void forward(float dist, float speed)
   // LF = Left forward pin, LR = Left reverse pin
   // RF = Right forward pin, RR = Right reverse pin
   // This will be replaced later with bare-metal code.
-  analogWrite(LF, val - 2);
-  analogWrite(RF, val - 8);
+  analogWrite(LF, val);
+  analogWrite(RF, val - 36);
   analogWrite(LR,0);
   analogWrite(RR, 0);
-  if (leftForwardDist - newDist < 5) {
+  if (leftForwardDist > newDist || dir == STOP) {
       analogWrite(LF, 0);
       analogWrite(RF, 0);
-      analogWrite(LR, 255);
+      analogWrite(LR, 255-30);
       analogWrite(RR, 255);
       int temp = deltaDist/1.5;
       if (temp > 60) temp = 60;
+      if (temp <= 10) temp = 0;
       delay(temp); 
   }
 }
@@ -717,7 +718,7 @@ void DistanceSensor()
 {
    Distance = 0;
    for (int i = 0; i < 5; i++) {
-    delay(10);
+    delay(5);
     Distance += sonar.ping_cm();
    }
    scanDistance = Distance/5;
@@ -754,14 +755,22 @@ void loop() {
       while((leftForwardDist <= newDist) && (rightForwardDist <= newDist)) {
         scanDistance = 99;
         DistanceSensor();
-        if (scanDistance <= 8) {
+        if (scanDistance <= 5 || dir == STOP) {
+          analogWrite(LF, 0);
+          analogWrite(RF, 0);
+          analogWrite(LR, 255-30);
+          analogWrite(RR, 255);
+          int temp = deltaDist/1.8;
+          if (temp > 60) temp = 60;
+          if (temp <= 10) temp = 0;
+          delay(temp);
           break;
         }
       }
       
       //if((leftForwardDist > newDist) && (rightForwardDist > newDist))
       { 
-        delay(50); 
+        delay(60); 
         deltaDist=0; 
         newDist=0; 
         stop();
