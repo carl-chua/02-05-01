@@ -417,7 +417,7 @@ void forward(float dist, float speed)
   else deltaDist = 999999;
 
   newDist = leftForwardDist + deltaDist;
-  int val = pwmVal(80);
+  int val = pwmVal(100);
   dir = FORWARD;
   // For now we will ignore dist and move
   // forward indefinitely. We will fix this
@@ -427,13 +427,13 @@ void forward(float dist, float speed)
   // RF = Right forward pin, RR = Right reverse pin
   // This will be replaced later with bare-metal code.
   analogWrite(LF, val);
-  analogWrite(RF, val - 36);
+  analogWrite(RF, val);
   analogWrite(LR,0);
   analogWrite(RR, 0);
   if (leftForwardDist > newDist || dir == STOP) {
       analogWrite(LF, 0);
       analogWrite(RF, 0);
-      analogWrite(LR, 255-30);
+      analogWrite(LR, 255);
       analogWrite(RR, 255);
       int temp = deltaDist/1.5;
       if (temp > 60) temp = 60;
@@ -755,7 +755,7 @@ void loop() {
       while((leftForwardDist <= newDist) && (rightForwardDist <= newDist)) {
         scanDistance = 99;
         DistanceSensor();
-        if (scanDistance <= 5 || dir == STOP) {
+        if (scanDistance <= 5 && scanDistance > 0|| dir == STOP) {
           analogWrite(LF, 0);
           analogWrite(RF, 0);
           analogWrite(LR, 255-30);

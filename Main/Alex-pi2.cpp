@@ -3,7 +3,7 @@
 #include <semaphore.h>
 #include <unistd.h>
 #include <stdint.h>
-#include <ncurses.h>
+#include <curses.h>
 #include "packet.h"
 #include "serial.h"
 #include "serialize.h"
@@ -235,7 +235,7 @@ void sendCommand(char command)
 			break;
 
 		default:
-			printf("Bad command\n");
+			printw("Bad command\n");
 
 	}
 }
@@ -261,20 +261,22 @@ int main()
 	helloPacket.packetType = PACKET_TYPE_HELLO;
 	sendPacket(&helloPacket);
 
-	while(!exitFlag)
+	initscr();
+    while(!exitFlag)
 	{
 		char ch = 's';
 		do {
-			printf("Command (f=forward, b=reverse, l=turn left, r=turn right, s=stop, c=clear stats, g=get stats q=exit)\n");
-			ch = getchar();
-			printf("\n");
-		// Purge extraneous characters from input stream
-		flushInput();
+            printw("Command (w=forward, s=reverse, a=turn left, d=turn right, s=stop, c=clear stats, g=get stats q=exit)\n");
+			refresh();
+            ch = getch();
+		    clear();
+        // Purge extraneous characters from input stream
 
 		sendCommand(ch);
 	} while (!exitFlag);
 	}
 
-	printf("Closing connection to Arduino.\n");
-	endSerial();
+	printw("Closing connection to Arduino.\n");
+	endwin();
+    endSerial();
 }
